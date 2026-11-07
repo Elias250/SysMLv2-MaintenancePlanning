@@ -10,7 +10,7 @@ library package 'MachineLibrary' {
 		
 	}
 
-	part def Maschine :> PhysicalObject {
+	part def Machine :> PhysicalObject {
 
 		action maintenanceActivities : MaintenanceActivity [0..*];
 		action setupActivities [0..*];

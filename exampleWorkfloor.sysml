@@ -5,11 +5,11 @@ package workshop {
 	private import MaintenanceLibrary::*;
 	private import SI::hour;
 
-	part matsuura : Maschine {
+	part matsuura : Machine {
 
 		action cleanProtectiveGlass : PreventativeMaintenanceActivity :> maintenanceActivities {
 			:>> timeInterval = 30 [hour];
 		}
-		
+
 	}
 }
