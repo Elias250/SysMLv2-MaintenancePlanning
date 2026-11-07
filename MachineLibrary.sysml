@@ -1,5 +1,5 @@
 
-library package 'machineLibrary' {
+library package 'MachineLibrary' {
 
 	private import MaintenanceLibrary;
 	private import MaintenanceLibrary::MaintenanceActivity;
@@ -16,9 +16,7 @@ library package 'machineLibrary' {
 		action setupActivities [0..*];
 		action workOrderActivities [0..*];
 
-		action cleanProtectiveGlass : PreventativeMaintenanceActivity :> maintenanceActivities {
-			:>> timeInterval = 30 [hour];
-		}
+		
 
 	}
 
