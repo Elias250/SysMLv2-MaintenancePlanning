@@ -8,6 +8,7 @@ library package 'MaintenanceLibrary' {
 	action def PreventativeMaintenanceActivity :> MaintenanceActivity {
 
 		attribute timeInterval : ISQ::DurationValue;
+		attribute timeSinceLastMaintenance : ISQ::DurationValue;
 
 	}
 
