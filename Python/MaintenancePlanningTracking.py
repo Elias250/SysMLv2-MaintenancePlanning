@@ -1,7 +1,5 @@
 from sysmlv2_client import SysMLV2Client, SysMLV2Error
-from pprint import pprint
 from datetime import datetime
-import uuid # For element IDs
 
 BASE_URL = "http://localhost:8083"
 # Replace with the actual token from flexo-setup/docker-compose/env/flexo-sysmlv2.env
@@ -22,7 +20,7 @@ def getLatestCommitId(client: SysMLV2Client, project_id: str) -> str:
 
     if commit_list:
         latest_commit = commit_list[0]
-        latest_commit_id = latest_commit.get('@id')
+        latest_commit_id : str = str(latest_commit.get('@id'))
         latest_commit_date = datetime.fromisoformat(latest_commit['created'].replace('Z', '+00:00'))
 
         # Find the latest commit by comparing dates
@@ -31,12 +29,12 @@ def getLatestCommitId(client: SysMLV2Client, project_id: str) -> str:
 
             if commit_date > latest_commit_date:
                 latest_commit = commit
-                latest_commit_id = commit.get('@id')
+                latest_commit_id : str = str(latest_commit.get('@id'))
                 latest_commit_date = commit_date
         
         print(f"Latest commit ID for project {project_id}: {latest_commit_id}")
         return latest_commit_id
-    return 0
+    return "0"
 
 def searchElements(elements, search_criteria, search_term):
     """
@@ -135,14 +133,14 @@ def findPreventativeMaintenanceActivities(client: SysMLV2Client, project_id: str
             for machine_id in machine_ids:
                 machine = client.get_element(project_id, machine_id, latest_commit_id)
                 if machine:
-                    ownedRelationships = machine.get('ownedRelationship')
+                    ownedRelationships = machine.get('ownedRelationship') or[]
                     #get ownedRelatedElements from ownedRelationships
                     owned_elements = []
                     for featureMembership in ownedRelationships:
                         featureMembership_id = featureMembership.get('@id')
                         featureMembership_element = client.get_element(project_id, featureMembership_id, latest_commit_id)
                         if featureMembership_element.get('@type') == 'FeatureMembership':
-                            ownedRelatedElements = featureMembership_element.get('ownedRelatedElement')
+                            ownedRelatedElements = featureMembership_element.get('ownedRelatedElement') or []
                             for ownedRelatedElement in ownedRelatedElements:
                                 owned_elements.append(ownedRelatedElement)
                     #filter owned elements for activities
@@ -153,20 +151,22 @@ def findPreventativeMaintenanceActivities(client: SysMLV2Client, project_id: str
                         preventative_maintenance_activity_ids.extend(findUsagesElement(elements, prevantative_maintenance_activity_defintions))
                     else:
                         print(f"No owned elements found for machine {machine_id}.")
-                        return 0
+                        return []
                 else:
                     print(f"Machine with ID {machine_id} not found in the latest commit.")
-                    return 0             
+                    return []
 
             return preventative_maintenance_activity_ids
-        
-        return 0  
+
+        return []
         
     except SysMLV2Error as e:
         print(f"An API error occurred: {e}")
+        return []
         
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+        return []
 
 
 
@@ -176,27 +176,29 @@ if __name__ == "__main__":
         # Initialize the SysML v2 client
         client = SysMLV2Client(base_url=BASE_URL, bearer_token=BEARER_TOKEN)
         print("Client initialized.")
+
+        latest_commit_id = getLatestCommitId(client, PROJECT_ID)
+        
+        #all elements in the latest commit
+        elements = client.list_elements(PROJECT_ID, latest_commit_id)
+    
+    
+        preventative_maintenance_activity_ids = findPreventativeMaintenanceActivities(client, PROJECT_ID, latest_commit_id, elements)
+    
+        if preventative_maintenance_activity_ids:
+            print(f"Preventative Maintenance Activity IDs: {preventative_maintenance_activity_ids}")
+    
+            #going through every maintenance activity and getting there service intervals
+            for activity_id in preventative_maintenance_activity_ids:
+                activity = client.get_element(PROJECT_ID, activity_id, getLatestCommitId(client, PROJECT_ID))
+                if activity:
+                    ownedRelationships = activity.get('ownedRelationship')
+                else:
+                    print(f"Activity with ID {activity_id} not found.")
+    
+        else:
+            print("No Preventative Maintenance Activities found.")
     except ValueError as e:
         print(f"Initialization error: {e}")
 
-    latest_commit_id = getLatestCommitId(client, PROJECT_ID)
-
-    #all elements in the latest commit
-    elements = client.list_elements(PROJECT_ID, latest_commit_id)
-
-
-    preventative_maintenance_activity_ids = findPreventativeMaintenanceActivities(client, PROJECT_ID, latest_commit_id, elements)
-
-    if preventative_maintenance_activity_ids:
-        print(f"Preventative Maintenance Activity IDs: {preventative_maintenance_activity_ids}")
-
-        #going through every maintenance activity and getting there service intervals
-        for activity_id in preventative_maintenance_activity_ids:
-            activity = client.get_element(PROJECT_ID, activity_id, getLatestCommitId(client, PROJECT_ID))
-            if activity:
-                ownedRelationships = activity.get('ownedRelationship')
-            else:
-                print(f"Activity with ID {activity_id} not found.")
-
-    else:
-        print("No Preventative Maintenance Activities found.")
+    
